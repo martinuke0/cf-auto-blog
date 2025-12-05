@@ -1,0 +1,23 @@
+{
+  "name": "natlangpush",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for generating and publishing blog posts with LLM assistance",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "blog",
+    "llm",
+    "github",
+    "markdown"
+  ],
+  "author": "",
+  "license": "MIT"
+}
