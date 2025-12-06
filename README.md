@@ -422,6 +422,27 @@ git commit -m "Fix GitHub publishing UTF-8 encoding and add diagnostic tools"
 git push origin cf-auto-blog
 ```
 
+### Interactive Git Workflow
+
+For more complex workflows with multiple jobs and interactive choices:
+
+```bash
+# Run the interactive workflow manager
+node git-workflow.js
+```
+
+The workflow manager provides:
+- Multiple predefined jobs
+- Interactive yes/no prompts for each step
+- Ability to choose commit/push actions
+- Error handling and recovery options
+
+#### Available Jobs:
+1. **Create cf-auto-blog branch** - Creates branch, adds files, prompts for commit/push
+2. **Update documentation** - Updates README with changes, prompts for commit/push
+3. **Push cf-auto-blog to main** - Merges cf-auto-blog into main branch
+4. **Deploy to production** - Pushes current branch to remote
+
 ### Note on wrangler.toml
 The `wrangler.toml` file contains personal configuration (GitHub username/repository) and should not be committed to avoid exposing personal information in forks.
 

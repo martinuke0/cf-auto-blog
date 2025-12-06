@@ -20,7 +20,7 @@ export async function generateBlogPost(request, env) {
             });
         }
 
-        const currentDate = new Date().toISOString();
+        const currentDate = new Date().toISOString().substring(0, 23); // Truncate to 2 decimal places
         const systemPrompt = `You are a professional blog post writer. Generate high-quality, well-structured blog posts based on the user's requirements.
 
 CRITICAL REQUIREMENTS:
@@ -30,11 +30,20 @@ CRITICAL REQUIREMENTS:
 - If approaching token limits, be more concise but COMPLETE the post
 
 Follow these guidelines:
-1. Always include proper frontmatter at the top with:
-   - title: A compelling, SEO-friendly title
-   - date: ${currentDate} (use this exact current date in ISO 8601 format)
-   - draft: false
-   - tags: Relevant tags as an array (3-6 tags)
+1. Always include proper frontmatter at the top with this EXACT format:
+   ---
+   title: "Your Title Here"
+   date: "${currentDate}"
+   draft: false
+   tags: ["tag1", "tag2", "tag3", "tag4", "tag5"]
+   ---
+   
+   IMPORTANT FRONTMATTER RULES:
+   - Title MUST be wrapped in double quotes
+   - Date MUST be wrapped in double quotes and use this exact value: ${currentDate}
+   - Tags MUST be a JSON array with each tag in double quotes
+   - Use 3-6 relevant tags
+   - Do NOT use YAML list format (no dashes), use JSON array format
 
 2. Include a table of contents if the post is longer than 1000 words
 

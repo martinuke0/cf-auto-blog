@@ -68,6 +68,186 @@ export default {
                     }
                     return await diagnoseGitHubIssues(request, env);
 
+                case '/api/jobs':
+                    if (request.method !== 'GET') {
+                        return new Response('Method not allowed', { status: 405 });
+                    }
+                    return new Response(JSON.stringify([
+                        {
+                            id: 'create-branch',
+                            name: 'Create cf-auto-blog branch',
+                            description: 'Create new branch for Cloudflare auto blog fixes'
+                        },
+                        {
+                            id: 'update-docs',
+                            name: 'Update documentation',
+                            description: 'Update README with new troubleshooting information'
+                        },
+                        {
+                            id: 'push-to-main',
+                            name: 'Push cf-auto-blog to main',
+                            description: 'Merge cf-auto-blog branch into main branch'
+                        },
+                        {
+                            id: 'deploy-production',
+                            name: 'Deploy to production',
+                            description: 'Deploy changes to Cloudflare Workers'
+                        }
+                    ]), {
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                case '/api/run-job':
+                    if (request.method !== 'POST') {
+                        return new Response('Method not allowed', { status: 405 });
+                    }
+                    
+                    const { jobId } = await request.json();
+                    
+                    // Import the git workflow
+                    const { spawn } = require('child_process');
+                    const { promisify } = require('util');
+                    
+                    try {
+                        const { execAsync } = promisify(spawn);
+                        
+                        // Run the git-workflow.js script with the job ID
+                        const result = await execAsync('node', ['git-workflow.js'], {
+                            cwd: '.',
+                            env: {
+                                ...process.env,
+                                RUN_SINGLE_JOB: jobId
+                            }
+                        });
+                        
+                        if (result.error) {
+                            return new Response(JSON.stringify({
+                                error: 'Failed to execute job',
+                                details: result.error
+                            }), {
+                                status: 500,
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                        }
+                        
+                        // Parse the output to find the result
+                        const output = result.stdout || '';
+                        const successMatch = output.match(/🎉 All jobs completed!/);
+                        
+                        return new Response(JSON.stringify({
+                            success: !!successMatch,
+                            jobName: jobId,
+                            output: output
+                        }), {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        
+                    } catch (error) {
+                        return new Response(JSON.stringify({
+                            error: 'Failed to execute job',
+                            details: error.message
+                        }), {
+                            status: 500,
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    }
+
+                case '/api/multi-jobs':
+                    if (request.method === 'GET') {
+                        return new Response(JSON.stringify({
+                            availableJobs: [
+                                { id: 'generate', name: 'Generate Blog Post', description: 'Generate a new blog post from prompt' },
+                                { id: 'publish', name: 'Publish to GitHub', description: 'Publish generated content to GitHub' },
+                                { id: 'commit', name: 'Commit Changes', description: 'Commit changes to local repository' },
+                                { id: 'push', name: 'Push to Remote', description: 'Push changes to remote repository' }
+                            ]
+                        }), {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    }
+                    
+                    if (request.method === 'POST') {
+                        const { jobs } = await request.json();
+                        
+                        if (!Array.isArray(jobs)) {
+                            return new Response(JSON.stringify({
+                                error: 'Jobs must be an array'
+                            }), {
+                                status: 400,
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                        }
+
+                        // Process jobs in parallel
+                        const jobPromises = jobs.map(async (job) => {
+                            try {
+                                let result;
+                                switch (job.type) {
+                                    case 'generate':
+                                        result = await generateBlogPost(new Request('https://example.com', {
+                                            method: 'POST',
+                                            body: JSON.stringify({ prompt: job.data?.prompt || 'Default prompt' })
+                                        }), env);
+                                        break;
+                                    case 'publish':
+                                        result = await publishToGitHub(new Request('https://example.com', {
+                                            method: 'POST',
+                                            body: JSON.stringify({ content: job.data?.content || '' })
+                                        }), env);
+                                        break;
+                                    case 'commit':
+                                        // Simulate commit operation
+                                        result = { success: true, message: 'Changes committed', commitHash: 'abc123' };
+                                        break;
+                                    case 'push':
+                                        // Simulate push operation
+                                        result = { success: true, message: 'Changes pushed', url: 'https://github.com/example/repo' };
+                                        break;
+                                    default:
+                                        throw new Error(`Unknown job type: ${job.type}`);
+                                }
+                                
+                                return {
+                                    jobId: job.id,
+                                    success: true,
+                                    result: await result.json()
+                                };
+                            } catch (error) {
+                                return {
+                                    jobId: job.id,
+                                    success: false,
+                                    error: error.message
+                                };
+                            }
+                        });
+
+                        const results = await Promise.allSettled(jobPromises);
+                        const jobResults = results.map(result => result.value);
+                        
+                        return new Response(JSON.stringify({
+                            success: true,
+                            results: jobResults
+                        }), {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    }
+                    
+                    return new Response('Method not allowed', { status: 405 });
+
+                case '/api/job-status':
+                    if (request.method !== 'GET') {
+                        return new Response('Method not allowed', { status: 405 });
+                    }
+                    
+                    // Simulate job status tracking (in a real implementation, this would query a database)
+                    return new Response(JSON.stringify({
+                        activeJobs: [],
+                        completedJobs: [],
+                        queuedJobs: []
+                    }), {
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
                 default:
                     return new Response('Not found', { status: 404 });
             }
